@@ -1,44 +1,35 @@
-#███╗   ███╗███╗   ███╗██████╗ ██████╗ ███████╗ █████╗     ██████╗ ██████╗ ███╗   ███╗
-#████╗ ████║████╗ ████║██╔══██╗██╔══██╗╚══███╔╝██╔══██╗   ██╔════╝██╔═══██╗████╗ ████║
-#██╔████╔██║██╔████╔██║██║  ██║██████╔╝  ███╔╝ ███████║   ██║     ██║   ██║██╔████╔██║
-#██║╚██╔╝██║██║╚██╔╝██║██║  ██║██╔══██╗ ███╔╝  ██╔══██║   ██║     ██║   ██║██║╚██╔╝██║
-#██║ ╚═╝ ██║██║ ╚═╝ ██║██████╔╝██║  ██║███████╗██║  ██║██╗╚██████╗╚██████╔╝██║ ╚═╝ ██║
-#╚═╝     ╚═╝╚═╝     ╚═╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝
-# This Script Has Trial / Can Order For Pro version Follow https://mmdrza.com
-######################################################################################
-
 import requests
-import json
-import base58
 import random
-import os
 import binascii
 import bip32utils
-import codecs
 from mnemonic import Mnemonic
-from rich import print
 from bit import Key
 from bit.format import bytes_to_wif
 
-
-
-def GetBalance(address):
-    req = requests.get(f"https://btc4.trezor.io/api/v2/address/{address}").json()
-    return dict(req)['balance']
-
-
-def GetTxs(address):
+# 定义获取余额的函数
+def get_balance(address):
     try:
-        req = requests.get(f"https://btc4.trezor.io/api/v2/address/{address}").json()
-        return dict(req)["txs"]
-    except:
-        return '0'
+        response = requests.get(f"https://api.blockcypher.com/v1/btc/main/addrs/{address}/balance")
+        return float(response.json()['balance']) if response.status_code == 200 else -1
+    except Exception as e:
+        print(f"Error fetching balance for {address}: {e}")
+        return -1
+
+# 定义获取交易的函数
+def get_txs(address):
+    try:
+        response = requests.get(f"https://api.blockcypher.com/v1/btc/main/addrs/{address}/txs")
+        return len(response.json()['txs']) if response.status_code == 200 else 0
+    except Exception as e:
+        print(f"Error fetching transactions for {address}: {e}")
+        return 0
 
 
 
-mylist = []
-
-wordlist = ["abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract", "absurd", "abuse", "access",
+def main():
+    mnemonic_words = 12  # 设置助记词数量
+    max_attempts = 1000  # 设置最大尝试次数
+    wordlist = ["abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract", "absurd", "abuse", "access",
             "accident", "account", "accuse", "achieve", "acid", "acoustic", "acquire", "across", "act", "action",
             "actor", "actress", "actual", "adapt", "add", "addict", "address", "adjust", "admit", "adult", "advance",
             "advice", "aerobic", "affair", "afford", "afraid", "again", "age", "agent", "agree", "ahead", "aim", "air",
@@ -226,74 +217,62 @@ wordlist = ["abandon", "ability", "able", "about", "above", "absent", "absorb", 
             "win", "window", "wine", "wing", "wink", "winner", "winter", "wire", "wisdom", "wise",
             "wish", "witness", "wolf", "woman", "wonder", "wood", "wool", "word", "work", "world", "worry", "worth",
             "wrap", "wreck", "wrestle", "wrist", "write", "wrong", "yard", "year", "yellow", "you", "young", "youth",
-            "zebra", "zero", "zone", "zoo"]
+            "zebra", "zero", "zone", "zoo"]  # 此处省略了完整的词表，应包含2048个单词
 
-divs = 1
-z = 0
-fo = 0
-vo = 0
-while True:
-    c1 = random.choice(wordlist)
-    c2 = random.choice(wordlist)
-    c3 = random.choice(wordlist)
-    c4 = random.choice(wordlist)
-    c5 = random.choice(wordlist)
-    c6 = random.choice(wordlist)
-    c7 = random.choice(wordlist)
-    c8 = random.choice(wordlist)
-    c9 = random.choice(wordlist)
-    c10 = random.choice(wordlist)
-    c11 = random.choice(wordlist)
-    c12 = random.choice(wordlist)
-    Magic = f"{c1} {c2} {c3} {c4} {c5} {c6} {c7} {c8} {c9} {c10} {c11} {c12}"
-    for i in range(0, 1):
-        z += 1
-        MnemonicWords: str = Magic
-        Mnemo = Mnemonic("english")
-        Seed = Mnemo.to_seed(MnemonicWords, passphrase="")
-        Bip32_Root_Key_Object = bip32utils.BIP32Key.fromEntropy(Seed)
-        Bip32_Child_Key_Object = Bip32_Root_Key_Object.ChildKey(44 + bip32utils.BIP32_HARDEN).ChildKey(
-            0 + bip32utils.BIP32_HARDEN).ChildKey(0 + bip32utils.BIP32_HARDEN).ChildKey(0).ChildKey(i)
-        First_encode = base58.b58decode(Bip32_Child_Key_Object.WalletImportFormat())
-        Private_Key_Byte = binascii.hexlify(First_encode)
-        Private_Key_Hex = Private_Key_Byte[2:-10]
-        dec = int(Private_Key_Hex.decode(), 16)
-        bip32_root = Bip32_Root_Key_Object.ExtendedKey()
-        public_key = binascii.hexlify(Bip32_Child_Key_Object.PublicKey()).decode()
-        Private_Hex = Private_Key_Hex.decode()
-        bytePrivate = codecs.decode(Private_Hex, 'hex_codec')
-        wifCompressed = bytes_to_wif(bytePrivate, compressed=True)
-        wifUnCompressed = bytes_to_wif(bytePrivate, compressed=False)
-        bit_com = Key(wifCompressed)
-        bit_uncom = Key(wifUnCompressed)
-        compressedAddr = bit_com.address
-        uncompressedAddr = bit_uncom.address
-        txs_Compressed = GetTxs(compressedAddr)
-        txs_unCompressed = GetTxs(uncompressedAddr)
-        if int(txs_Compressed) > 0 or int(txs_unCompressed) > 0:
-            balance_compressed = GetBalance(compressedAddr)
-            balance_uncompressed = GetBalance(uncompressedAddr)
-            fo += 1
-            open("Found.txt", "a").write(f"Compressed Address: {compressedAddr} TXS: {txs_Compressed}\n"
-                                         f"unCompressed Address: {uncompressedAddr} TXS: {txs_unCompressed}\n"
-                                         f"Mnemonic : {MnemonicWords}\n"
-                                         f"Private Key: {Private_Hex}\n"
-                                         f"DEC: {dec}\n"
-                                         f"WIF Compressed: {wifCompressed}\n"
-                                         f"WIF Uncompressed: {wifUnCompressed}\n"
-                                         f"{'-' * 24} M M D R Z A . C o M {'-' * 24}\n")
-            if int(balance_uncompressed) > 0 or int(balance_compressed) > 0:
-                vo += 1
-                open("FoundWithValue.txt", "a").write(f"Compressed Address: {compressedAddr} Balance: {balance_compressed}\n"
-                                                      f"unCompressed Address: {uncompressedAddr} Balance: {balance_uncompressed}\n"
-                                                      f"Mnemonic : {MnemonicWords}\n"
-                                                      f"Private Key: {Private_Hex}\n"
-                                                      f"DEC: {dec}\n"
-                                                      f"WIF Compressed: {wifCompressed}\n"
-                                                      f"WIF Uncompressed: {wifUnCompressed}\n"
-                                                      f"{'-' * 24} M M D R Z A . C o M {'-' * 24}\n")
+    attempts = 0
+    found = 0
+    found_with_value = 0
+
+    while attempts < max_attempts:
+        attempts += 1
+        mnemonic_words_list = random.sample(wordlist, mnemonic_words)
+        mnemonic_sentence = ' '.join(mnemonic_words_list)
+
+        mnemonic = Mnemonic("english")
+        seed = mnemonic.to_seed(mnemonic_sentence, passphrase="")
+
+        bip32_root_key = bip32utils.BIP32Key.fromEntropy(seed)
+        bip32_child_key = bip32_root_key.ChildKey(44 + bip32utils.BIP32_HARDEN).ChildKey(0 + bip32utils.BIP32_HARDEN).ChildKey(0 + bip32utils.BIP32_HARDEN).ChildKey(0)
+
+        private_key_hex = binascii.hexlify(bip32_child_key.PrivateKey()).decode()
+        public_key = binascii.hexlify(bip32_child_key.PublicKey()).decode()
+        wif_compressed = bytes_to_wif(bip32_child_key.PrivateKey(), compressed=True)
+        wif_uncompressed = bytes_to_wif(bip32_child_key.PrivateKey(), compressed=False)
+
+        compressed_addr = Key(wif_compressed).address
+        uncompressed_addr = Key(wif_uncompressed).address
+
+        txs_compressed = get_txs(compressed_addr)
+        txs_uncompressed = get_txs(uncompressed_addr)
+
+        if int(txs_compressed) > 0 or int(txs_uncompressed) > 0:
+            found += 1
+            balance_compressed = get_balance(compressed_addr)
+            balance_uncompressed = get_balance(uncompressed_addr)
+
+            with open("Found.txt", "a") as file:
+                file.write(f"Compressed Address: {compressed_addr} TXS: {txs_compressed}\n"
+                           f"Uncompressed Address: {uncompressed_addr} TXS: {txs_uncompressed}\n"
+                           f"Mnemonic: {mnemonic_sentence}\n"
+                           f"Private Key: {private_key_hex}\n"
+                           f"WIF Compressed: {wif_compressed}\n"
+                           f"WIF Uncompressed: {wif_uncompressed}\n"
+                           f"{'-' * 24} M M D R Z A . C o M {'-' * 24}\n")
+
+            if int(balance_compressed) > 0 or int(balance_uncompressed) > 0:
+                found_with_value += 1
+                with open("FoundWithValue.txt", "a") as file:
+                    file.write(f"Compressed Address: {compressed_addr} Balance: {balance_compressed}\n"
+                               f"Uncompressed Address: {uncompressed_addr} Balance: {balance_uncompressed}\n"
+                               f"Mnemonic: {mnemonic_sentence}\n"
+                               f"Private Key: {private_key_hex}\n"
+                               f"WIF Compressed: {wif_compressed}\n"
+                               f"WIF Uncompressed: {wif_uncompressed}\n"
+                               f"{'-' * 24} M M D R Z A . C o M {'-' * 24}\n")
         else:
-            # Print Compressed Address with Total Transaction's + Mnemonic
-            print(f"[red1]Scan:[white]{z}[/white] # Found:[white]{fo}[/white] / Value:[white]{vo}[/white] TXS:[white]{txs_Compressed}[/white] :[cyan] {compressedAddr}[/cyan] [white]{MnemonicWords}[/white] [/red1]")
-            # Print unCompressed Address with Total Transaction's + Mnemonic
-            print(f"[red1]Scan:[white]{z}[/white] # Found:[white]{fo}[/white] / Value:[white]{vo}[/white] TXS:[white]{txs_unCompressed}[/white] :[cyan] {uncompressedAddr}[/cyan] [white]{MnemonicWords}[/white] [/red1]")
+            print(f"Attempts: {attempts}, Found: {found}, Found with value: {found_with_value}，mnemonic: {mnemonic_sentence}")
+
+    print(f"Scan complete. Attempts: {attempts}, Found: {found}, Found with value: {found_with_value}")
+
+if __name__ == "__main__":
+    main()
